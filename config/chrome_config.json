@@ -1,0 +1,16 @@
+{
+  "chrome_path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "user_data_dir": "profile",
+  "unique_key": "--my-unique-chrome-key-PFXQDuEar6vvacpf40A9",
+  "port_range": {
+    "min": 49152,
+    "max": 65535
+  },
+  "args": [
+    "--start-maximized",
+    "--no-first-run"
+  ],
+  "my_args": {
+    "headless": "windowed"
+  }
+}

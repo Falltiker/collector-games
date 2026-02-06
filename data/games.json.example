@@ -1,0 +1,24 @@
+{
+    "3744480": {
+        "name": "Arabian Gulf",
+        "url": "https://store.steampowered.com/app/3744480/Arabian_Gulf/?snr=1_7_7_2300_150_1",
+        "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3744480/bba4bb36623e51d0863a4ed2e9d2fa6f3765fc47/capsule_231x87.jpg?t=1770243842",
+        "description": "Arabian Gulf is a single-player survival action game set in a harsh desert. Face relentless enemies, endure tough conditions, and fight through dangerous terrain using basic tools and weapons. Survive, overcome each challenge, reach the distant castle, and claim the hidden treasure.",
+        "discounted_price": 0.0,
+        "currency_symbol": "₴",
+        "original_price": "50,00₴",
+        "developer": {
+            "name": "IVDev",
+            "url": "https://store.steampowered.com/search/?developer=IVDev&snr=1_5_9__2000"
+        },
+        "publisher": {
+            "name": "IVDev",
+            "url": "https://store.steampowered.com/search/?publisher=IVDev&snr=1_5_9__422"
+        },
+        "release_date": "30 May, 2025",
+        "recent_reviews": "- Need more user reviews to generate a score",
+        "all_reviews": "Need more user reviews to generate a score",
+        "dlc": null,
+        "status": "collected"
+    }
+}
