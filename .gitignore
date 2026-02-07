@@ -17,8 +17,5 @@ logs/
 .vscode/
 .idea/
 
-# Data
-data/*.json
-
 # Personal files and configurations
 profile

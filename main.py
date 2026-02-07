@@ -108,6 +108,8 @@ async def auto_collector():
 
 @logger.catch
 async def main():
+    await automation.one_started_run_manual_auth()
+
     await auto_collector()
 
     scheduler = AsyncIOScheduler()

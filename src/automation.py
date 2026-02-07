@@ -3,7 +3,7 @@ from src.utils.chrome_manager import ChromeManager
 from src.utils.chrome_manager import HumanBehavior as HB
 from loguru import logger
 import json
-
+import os
 
 
 
@@ -40,7 +40,30 @@ async def run_manual_auth(manager, page):
     await HB.sleep()
 
 
+@logger.catch
+async def one_started_run_manual_auth():
+    """Запускаем 1 раз при первом запуске скрипта для авторизации.
+    Запускается если не находит папку профиля браузера.
+    """
 
+    profile_dir = "profile"
+
+    if not os.path.isdir(profile_dir):
+        logger.info("Нету папки профиля, запукаем авторизацию.")
+        async with ChromeManager() as manager:
+            page = manager.page
+
+            await page.goto("https://store.steampowered.com/", wait_until="domcontentloaded")
+            logger.debug("Перешли на Steam.")
+            await HB.sleep("long")
+
+            if not await check_auth(page):
+                await run_manual_auth(manager, page)
+
+            await HB.sleep()
+
+            await page.goto("https://store.steampowered.com/search?term=", wait_until="domcontentloaded")
+            await HB.sleep()
 
 
 @logger.catch
@@ -61,7 +84,6 @@ async def collect_game(page, app_id, info):
         is_collected = page.locator(f'a[href*="steam://install/{app_id}"]').first
 
         if await is_collected.is_visible():
-            collected_count += 1
             logger.info(f"Забрали игру {info['name']} app_id: {app_id}.")
             await HB.sleep("long")
 
@@ -82,7 +104,6 @@ async def collect_games(games_list):
         if not await check_auth(page):
             await run_manual_auth(manager, page)
 
-
         for app_id, info in games_list.items():
             if info["status"] != "new":
                 continue
@@ -92,10 +113,10 @@ async def collect_games(games_list):
                 games_list[app_id]["status"] = "collected"
 
             except Exception as e:
+                games_list[app_id]["status"] = "new"
                 logger.error(f"Сбой на {app_id}: {e}")
 
         return games_list
-
 
 
 

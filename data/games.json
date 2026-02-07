@@ -1,4 +1,26 @@
 {
+    "1511950": {
+        "name": "Magellania",
+        "url": "https://store.steampowered.com/app/1511950/Magellania/?snr=1_7_7_2300_150_1",
+        "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1511950/capsule_231x87.jpg?t=1770000417",
+        "description": "Defeat your enemies with the power of love, friendship, and violent military aggression in Magellania, a hardcore tactics-RPG set in outer space.",
+        "discounted_price": 0.0,
+        "currency_symbol": "₴",
+        "original_price": "169,00₴",
+        "developer": {
+            "name": "Illunsoft",
+            "url": "https://store.steampowered.com/search/?developer=Illunsoft&snr=1_5_9__2000"
+        },
+        "publisher": {
+            "name": "Illunsoft",
+            "url": "https://store.steampowered.com/search/?publisher=Illunsoft&snr=1_5_9__422"
+        },
+        "release_date": "18 Mar, 2021",
+        "recent_reviews": 33,
+        "all_reviews": "100% of the 33 user reviews for this game are positive.",
+        "dlc": null,
+        "status": "collected"
+    },
     "3744480": {
         "name": "Arabian Gulf",
         "url": "https://store.steampowered.com/app/3744480/Arabian_Gulf/?snr=1_7_7_2300_150_1",
