@@ -1,5 +1,5 @@
 <h1 align="center">Collector Games</h1>
-Automated Steam free games collector with lightweight background monitoring via requests and system tray integration for easy and convenient configuration when needed.
+An automatic game collector with a 100% discount on Steam, featuring easy background monitoring via the requests library and integration into the system tray for simple and convenient configuration when needed..
 
 ## Workflow
 1. **Monitoring**: Lightweight request via Requests to check for new games.

@@ -1,8 +1,17 @@
 import requests
+import time
+import re
 from bs4 import BeautifulSoup as BS
 from fake_useragent import UserAgent
 from loguru import logger
 
+
+
+@logger.catch
+def processing_game(headers, all_games:list = []):
+    
+
+    return games_list
 
 
 @logger.catch
@@ -14,7 +23,11 @@ def get_games():
     }
 
     # В запросе уже есть параметры фильтрации
-    response = requests.get('https://store.steampowered.com/search/results?force_infinite=1&maxprice=free&specials=1&ndl=1&snr=1_7_7_230_7', headers=headers)
+    response = requests.get(
+        'https://store.steampowered.com/search/results?force_infinite=1&maxprice=free&specials=1&ndl=1&snr=1_7_7_230_7', 
+        headers=headers,
+        timeout=10
+        )
     soup = BS(response.text, "lxml")
     logger.debug(f"Ответ {response.status_code}")
 
@@ -33,99 +46,152 @@ def get_games():
     games_list = dict()
     for game in all_games:
         app_id = game["data-ds-appid"]
-        logger.debug(f"ID игры: {app_id}")
+
         title = game.find("span", class_="title").text
-        logger.debug(f"Название {title}")
+
         discounted_price_tag = game.find("div", class_="discount_final_price")
-        discounted_price = discounted_price_tag.text.strip() if discounted_price_tag else 0
-        currency_symbol = discounted_price[-1]
-        logger.debug(f"Символ валюты: {currency_symbol}")
-        discounted_price = str(discounted_price).replace(",", ".")[:-1]  # Убираем знак валюты, меняем запятую на точку для преобразования в float
-        discounted_price = float(discounted_price)
+        discounted_price = 0
+        currency_symbol = "?"
+        if discounted_price_tag:
+            price_text = discounted_price_tag.text.strip()
+            if price_text and len(price_text) > 1:
+                currency_symbol = price_text[-1]
+                try:
+                    discounted_price = re.search(r'[\d,.]+', price_text).group()
+                    discounted_price = float(discounted_price.replace(",", ".").replace(" ", ""))
+                except ValueError:
+                    logger.warning(f"Не удалось распарсить цену: {price_text}")
         logger.debug(f"Цена: {discounted_price}{currency_symbol}")
+
         # Проверяем, что цена нулевая. Не знаю почему, но иногда игра может быть не со 100% скидкой, хотя фильтр не должен показывать такие игры
-        # Мне кажется, что это я забыл убрать плсле испрвления какой то части кода.
+        # Мне кажется, что это я забыл убрать после исправления какой то части кода.
         if discounted_price != 0:
-            logger.debug(f"Не бесплатна, цена: {discounted_price}")
+            logger.warning(f"Игра {title} не бесплатна, цена: {discounted_price}{currency_symbol}")
             continue
 
         url = game.get("href")
-        logger.debug(f"URL: {url}")
-        image = game.find("div", class_="search_capsule").find("img").get("src")
-        logger.debug(f"Изображение: {image}")
-        original_price = game.find("div", class_="discount_original_price")
-        logger.debug(f"Цена без скидки: {original_price.text.strip() if original_price else 'Нет оригинальной цены'}")
 
-        res = requests.get(url)
+        image = game.find("div", class_="search_capsule").find("img").get("src")
+
+        orig_price_tag = game.find("div", class_="discount_original_price")
+        original_price = orig_price_tag.text.strip() if orig_price_tag else None
+        if not original_price:
+            logger.warning(f"У {title} оригинальная цена не найдена.")
+
+        res = requests.get(
+            url,
+            headers=headers,
+            timeout=10
+            )
+        logger.debug(f'Ответ {res.status_code}')
         soup = BS(res.text, "lxml")
-        logger.debug(f"Получен HTML-код страницы, для детальой информации: {url}.")
 
         desc_tag = soup.find("div", class_="game_description_snippet")
-        description = desc_tag.text.strip() if desc_tag else "Описание не найдено"
-        logger.debug(f"Описание: {description}")
+        description = desc_tag.text.strip() if desc_tag else None
+        if not description:
+            logger.warning(f"Описание {title} не найдено.")
 
+        # Просто перешли в удобный блок для дальнейшей разборки
         mini_div_info = soup.find("div", class_="glance_ctn_responsive_left")
 
-        user_reviews = mini_div_info.find("div", id="userReviews")
-        logger.debug("Получен div id=userReviews")
-        recent_reviews_row = user_reviews.find("div", class_="summary column")
-        logger.debug("Получен div class=summary column")
-        review_summary = recent_reviews_row.find_all("span")[0].text.strip()
-        logger.debug(f"Общее впечатление {review_summary}")
-        try:
-            review_count_text = recent_reviews_row.find_all("span")[1].text.strip()
-            review_count = int(review_count_text.strip("()").replace(",", "").replace(" ", ""))
-        except Exception as e:
-            review_count = review_count_text
-            logger.debug(f" Недостаточно обзоров для расчета рейтинга: Ошибка: {e}")
+        user_reviews = mini_div_info.find("div", id="userReviews") # блок с впечатлениями и отзывами
+        review_summary = None
+        review_count = None
+        if user_reviews:
+            recent_reviews_row = user_reviews.find("div", class_="summary column")
+            review = recent_reviews_row.find_all("span")
 
-        logger.debug(f"Недавние отзывы: {review_count} отзывов, общее впечатление: {review_summary}")
+            if review:
+                review_summary = review[0].text.strip()
 
-        all_reviews = user_reviews.find_all("a", class_="user_reviews_summary_row")[-1]["data-tooltip-html"]
-        logger.debug(f"Все отзывы {all_reviews}")
+                try:
+                    review_count_text = review[1].text.strip()
+                    review_count = int(review_count_text.strip("()").replace(",", "").replace(" ", ""))
+                except Exception as e:
+                    review_count = None
+                    logger.debug(f"Недостаточно обзоров для расчета рейтинга: Ошибка: {e}")
+
+        else:
+            logger.warning(f"Отзывы {title} не найдены.")
+
 
         release_date_tag = mini_div_info.find("div", class_="date")
-        release_date = release_date_tag.text.strip() if release_date_tag else "Дата выпуска не указана"
-        logger.debug(f"Дата выпуска: {release_date}")
+        release_date = release_date_tag.text.strip() if release_date_tag else None
+        if not release_date:
+            logger.warning(f"Дата выхода {title} не найдена.")
 
-        # Здесь я не уверен, может быть что, в стиме не указываться разработчик и издатель?.
-        developer_url = mini_div_info.find("div", id="developers_list").find("a")["href"]
-        developer_name_tag = mini_div_info.find("div", id="developers_list").find("a")
-        developer_name = developer_name_tag.text.strip() if developer_name_tag else "Разработчик не указан"
-        developer = {
-            "name": developer_name,
-            "url": developer_url
-        }
-        logger.debug(f"Разработчик {developer_name} ({developer_url})")
+        # Здесь я не уверен, может быть что, в Steam не указываться разработчик и издатель?.
+        developer_div = mini_div_info.find("div", id="developers_list")
+        developer_link = developer_div.find("a") if developer_div else None
+
+        if developer_link:
+            developer = {
+                "name": developer_link.text.strip(),
+                "url": developer_link.get("href", "")
+            }
+        else:
+            developer = {"name": "Не указан", "url": ""}
+            logger.warning(f"Разработчик {title} не найден.")
 
         publisher_tag = mini_div_info.find_all("div", class_="dev_row")[-1]
+        publisher_name = None
+        publisher_url = None
         if publisher_tag:
             publisher_link = publisher_tag.find("a")
-            publisher_name = publisher_link.text.strip() if publisher_link else "Издатель не указан"
-            publisher_url = publisher_link["href"] if publisher_link and publisher_link.has_attr("href") else "Издатель не указан"
-        else:
-            publisher_name = "Издатель не указан"
-            publisher_url = "Издатель не указан"
+            publisher_name = publisher_link.text.strip() if publisher_link else None
+            publisher_url = publisher_link["href"] if publisher_link and publisher_link.has_attr("href") else None
 
         publisher = {
             "name": publisher_name,
             "url": publisher_url
         }
-        logger.debug(f"Издатель {publisher_name} ({publisher_url})")
 
-        dlc = soup.find("div", class_="game_area_bubble game_area_dlc_bubble")
-        if dlc:
-            dlc_url = dlc.find("a")["href"]
-            dlc_name_tag = dlc.find("a")
+
+        # Я думаю полностью скипать DLC к платным играм, так как стим уведомит о скидке что в желаемом.
+        # Если что позже можно будет добавить такую функциональность
+        dlc_tag = soup.find("div", class_="game_area_bubble game_area_dlc_bubble")
+        dlc = dict()
+        if dlc_tag:
+            dlc_url = dlc_tag.find("a")["href"]
+            dlc_app_id = dlc_url.split("/")[-2]
+
+            dlc_name_tag = dlc_tag.find("a")
             dlc_name = dlc_name_tag.text.strip()
+
+            logger.debug(f"{title} DLC к игре {dlc_name}")
+
+            res = requests.get(
+                dlc_url, 
+                headers=headers,
+                timeout=10)
+            logger.debug(f'Ответ {res.status_code}')
+            soup = BS(res.text, "lxml")
+
+            price_tag = soup.find("div", class_="game_purchase_price price")
+            price = price_tag.text.strip() if price_tag else None
+
+            btn = soup.find("div", id="freeGameBtn")
+
+            if btn:
+                price = 0
+            elif price:
+                price = re.search(r'[\d,.]+', price).group()
+                price = float(price.replace(",", ".").replace(" ", ""))
+
+            if price > 0:
+                logger.debug(f"Цена игры {title} к которой прикреплен DLC: {price}")
+                continue
+
             dlc = {
-                "name": dlc_name,
-                "url": dlc_url
+            "app_id": dlc_app_id,
+            "name": dlc_name,
+            "url": dlc_url,
+            "price": price
             }
-            logger.debug(f"DLC {dlc_name} ({dlc_url})")
+
         else:
             dlc = None
-        
+
         games_list[app_id] = {
             "name": title,
             "url": url,
@@ -133,19 +199,22 @@ def get_games():
             "description": description,
             "discounted_price": discounted_price,
             "currency_symbol": currency_symbol,
-            "original_price": original_price.text.strip() if original_price else "Нет оригинальной цены",
+            "original_price": original_price,
             "developer": developer,
             "publisher": publisher,
             "release_date": release_date,
             "recent_reviews": review_count,
-            "all_reviews": all_reviews,
+            "recent_summary": review_summary,
             "dlc": dlc,
             "status": "new"
         }
 
-        logger.info(f"Обработка {title} завершена.")
+        time.sleep(2)
 
-    logger.info("👏 Все игры успешно обработано.")
+        logger.info(f"✅ Обработана: {title} | Рейтинг: {review_summary} ({review_count} отз.)")
+        logger.debug(f"Информация о игре: {games_list[app_id]}\n{"="*100}")
+
+
     return games_list
 
 

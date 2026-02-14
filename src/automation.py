@@ -72,20 +72,21 @@ async def collect_game(page, app_id, info):
     await HB.sleep("long")
     logger.debug(f'Перешли на страницу игры {info["name"]}, app_id: {app_id}.')
 
-    btn = page.locator('a[href*="javascript:addToCart"]').first
-
+    btn  = page.locator('a[href*="javascript:addToCart"]').first
+    btn2 = page.locator('div.btn_addtocart btn_packageinfo').first
     if await btn.is_visible():
         logger.debug("Нашли кнопку забрать в библиотеку.")
         await HB.move(page, element=btn, click=True, scroll=True)
 
+        logger.info(f"Забрали игру {info['name']} app_id: {app_id}.")
+        await HB.sleep("long")
+
+    elif await btn2.is_visible():
+        logger.debug("Нашли кнопку забрать в библиотеку.")
+        await HB.move(page, element=btn2, click=True, scroll=True)
+
         logger.debug("Нажали на кнопку и переходим к следующей по списку.")
         await HB.sleep()
-
-        is_collected = page.locator(f'a[href*="steam://install/{app_id}"]').first
-
-        if await is_collected.is_visible():
-            logger.info(f"Забрали игру {info['name']} app_id: {app_id}.")
-            await HB.sleep("long")
 
     else:
         logger.debug("Игра уже в библиотеке, помечаем как забранная.")
@@ -107,9 +108,15 @@ async def collect_games(games_list):
         for app_id, info in games_list.items():
             if info["status"] != "new":
                 continue
+            dlc = info["dlc"]
 
             try:
-                await collect_game(page, app_id, info)
+                if dlc:
+                    await collect_game(page, dlc["app_id"], dlc)
+                    logger.info(f"Забрали игру {dlc['name']} к которой пренадлежит ДЛС {info['name']}.")
+                    await collect_game(page, app_id, info)
+                else:
+                    await collect_game(page, app_id, info)
                 games_list[app_id]["status"] = "collected"
 
             except Exception as e:

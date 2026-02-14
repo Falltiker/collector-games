@@ -11,25 +11,15 @@ import os
 logger.remove()
 logger.add(
     sys.stderr, 
-    level="INFO",
-    backtrace=True, 
-    diagnose=True,
+    level="INFO"
     )
 logger.add(
-    "logs/DEBUG_{time:YYYY-MM-DD}.log",
+    "logs/DEBUG.log",
     level="DEBUG",
-    rotation="10 MB",
-    retention=5,
+    retention=10,
     backtrace=True, 
-    diagnose=True
-    )
-logger.add(
-    "logs/ERROR_{time:YYYY-MM-DD}.log",
-    level="ERROR",
-    rotation="10 MB",
-    retention=5,
-    backtrace=True, 
-    diagnose=True
+    diagnose=False,
+    enqueue=True
     )
 
 
